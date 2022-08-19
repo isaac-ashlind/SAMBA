@@ -32,7 +32,11 @@ def main():
     menu()
     #auto()
 
+
 def menu():
+    """
+    menu prompt version of program
+    """
     print("SAMBA (Study of Axial Magnetic Bottle Asymmetry)")
     print("************************************************")
     params_flag = params_prompt()
@@ -54,7 +58,11 @@ def menu():
     simulation(N, iterable, coll_flag)
     print("PROGRAM END")
 
+
 def auto():
+    """
+    hard coded version of program
+    """
     params = pd.read_csv("params3.csv", index_col=0)
     grid = pd.read_csv("grid.csv", index_col=0)
     particles = (Particle("e-"), Particle("p+"))
@@ -67,9 +75,11 @@ def auto():
 
 
 # SUPPORTING FUNCTIONS IN ALPHABETICAL ORDER
-# TODO: write comments and docstrings
 
 def boris(X, V, B, dt, q, m, _0, _1, _2, _3, _4):
+    """
+    collisionless particle pusher
+    """
     U = q / m * B * dt / 2
     W = 2 * U / (1 + np.dot(U, U))
     V_prime = V + np.cross(V, U)
@@ -124,8 +134,12 @@ def build_grid():
     return grid_df
 
 
-# TODO: replace thermal_speed
+# TODO: replace thermal_speed to phase out plasmapy formulary dependence
 def build_iterable(params_series, particles, grid_df, t, coll_flag):
+    """
+    pqdm needs input in the form of a single
+    iterable for parallel processing
+    """
     params = params_series.to_numpy().flatten()
     n = params[5] / u.m ** 3
     T = params[6] * u.keV
@@ -167,6 +181,10 @@ def coll_prompt():
 
 
 def collision_constant(n, T, particles):
+    """
+    calculate collision constant
+    as a function of density and temp
+    """
     e_0 = constants.eps0.value # F / m
     m_a = particles[0].mass.value # kg
     q_a = particles[0].charge.value # C
@@ -180,6 +198,9 @@ def collision_constant(n, T, particles):
 
 
 def coulomb(X, V, B, dt, q, m, kappa, v_therm, n, T, rng):
+    """
+    collisional particle pusher
+    """
     v_norm = np.linalg.norm(V)
     nu = n * kappa / v_norm ** 3
     D = nu * v_therm ** 3 / v_norm
@@ -198,12 +219,18 @@ def coulomb(X, V, B, dt, q, m, kappa, v_therm, n, T, rng):
     return X_new, V_new
 
 
-def density(n_0, r, R, B_norm, B_0):
-    n = n_0 * (1 - (r / R) ** 2) * B_norm / B_0
+def density(n_0, r, R):
+    """
+    plasma density as a function of radius
+    """
+    n = n_0 * (1 - (r / R) ** 2)
     return np.where(r < R, n, 0)
 
 
 def duration_number(coll_flag):
+    """
+    get duration and number of simulations
+    """
     t = None
     N = None
     while type(t) != float:
@@ -225,6 +252,9 @@ def duration_number(coll_flag):
 
 
 def get_B(x, y, z, B_0, b_neg, b_pos, d_neg, d_pos):
+    """
+    get B field as a function of position
+    """
     neg = np.array([z, B_0, b_neg, d_neg])
     pos = np.array([z, B_0, b_pos, d_pos])
     args = np.where(z < 0, neg, pos)
@@ -232,6 +262,9 @@ def get_B(x, y, z, B_0, b_neg, b_pos, d_neg, d_pos):
 
 
 def get_params():
+    """
+    get B field and plasma parameters
+    """
     params = {"B_0": None, "b_neg": None, "b_pos": None,
               "d_neg": None, "d_pos": None,
               "n_0": None, "T": None, "R": None}
@@ -326,12 +359,16 @@ def save_csv(data):
 
 
 def simulation(N, iterable, coll_flag):
+    """
+    batch function for Monte Carlo simulation
+    """
     batch_size = len(iterable.T)
     columns = ["x", "y", "z", "r", "v", "theta", "phi", "t"]
     results_df = pd.DataFrame(index=range(N * batch_size),
                               columns=columns)
     for n in range(N):
         print(f"\n{n + 1}/{N}")
+        # seed for repeatable results
         seed = np.full(iterable.shape[1], n)
         args = np.concatenate((iterable, [seed]), axis=0).T
         batch = pqdm(args, trajectory, n_jobs = os.cpu_count())
@@ -343,11 +380,17 @@ def simulation(N, iterable, coll_flag):
 
 
 def stitch(x, d_neg, d_pos):
+    """
+    particles exiting bottle enter new bottle
+    """
     L = d_neg + d_pos
     return (x + d_neg) % L - d_neg
 
 
 def trajectory(args):
+    """
+    simulate single particle trajectory
+    """
     num = 4 # number of evaluation points per radian
     r, v, theta, phi = args[:4]
     B_0, b_neg, b_pos, d_neg, d_pos = args[4:9]
